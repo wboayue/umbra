@@ -1,4 +1,5 @@
 pub mod event_stream;
+pub mod scheduler;
 
 use event_stream::{Command, EventStream};
 
@@ -6,6 +7,8 @@ use event_stream::{Command, EventStream};
 struct Actuation {
     fire_at: u64,
 }
+
+// scheduler 
 
 /// Processes events from the stream, managing scheduled actuations.
 /// * Handles Schedule commands to set firing times

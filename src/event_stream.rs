@@ -72,7 +72,17 @@ impl EventStream {
 
         // Track the latest scheduled firing time
         if let Some(Command::Schedule(fire_after)) = &tick.command {
-            self.last_time = tick.time + *fire_after;
+            match tick.time.checked_add(*fire_after) {
+                Some(scheduled_time) => {
+                    self.last_time = self.last_time.max(scheduled_time);
+                }
+                None => {
+                    eprintln!(
+                        "Warning: scheduled time overflow at time {} with fire_after {}",
+                        tick.time, fire_after
+                    );
+                }
+            }
         }
 
         tick
@@ -133,5 +143,36 @@ impl Iterator for EventStream {
                 None
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_event_schedule() {
+        let mut stream = EventStream::new();
+        let line = "10\t5";
+        let event = stream.parse_event(line).unwrap();
+        assert_eq!(event.time, 10);
+        assert_eq!(event.command, Some(Command::Schedule(5)));
+    }
+
+    #[test]
+    fn test_parse_event_cancel() {
+        let mut stream = EventStream::new();
+        let line = "15\t-1";
+        let event = stream.parse_event(line).unwrap();
+        assert_eq!(event.time, 15);
+        assert_eq!(event.command, Some(Command::Cancel));
+    }
+
+    #[test]
+    fn test_parse_event_invalid() {
+        let mut stream = EventStream::new();
+        let line = "invalid_line";
+        let event = stream.parse_event(line);
+        assert!(event.is_none());
     }
 }

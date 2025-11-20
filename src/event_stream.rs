@@ -21,17 +21,18 @@ pub struct Event {
 /// Iterator that reads commands from stdin and produces time-stepped events.
 /// Input format: `time\tfire_after` where negative fire_after indicates Cancel.
 /// Fills in time ticks between command events up to the last scheduled time.
-pub struct EventStream {
-    stdin: io::Stdin,
+pub struct EventStream<R: io::Read> {
+    reader: io::BufReader<R>,
+    // stdin: io::Stdin,
     pending_event: Option<Event>,
     last_time: u64,
     current_time: u64,
 }
 
-impl EventStream {
-    pub fn new() -> Self {
+impl<R: io::Read> EventStream<R> {
+    pub fn new(reader: R) -> Self {
         EventStream {
-            stdin: io::stdin(),
+            reader: io::BufReader::new(reader),
             last_time: 0,
             current_time: 0,
             pending_event: None,
@@ -102,13 +103,7 @@ impl EventStream {
     }
 }
 
-impl Default for EventStream {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Iterator for EventStream {
+impl<R: io::Read> Iterator for EventStream<R> {
     type Item = Event;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -122,9 +117,8 @@ impl Iterator for EventStream {
         }
 
         // Read next line from stdin
-        let mut stdin = self.stdin.lock();
         let mut buf = String::new();
-        match stdin.read_line(&mut buf) {
+        match self.reader.read_line(&mut buf) {
             Ok(0) => {
                 // EOF: continue time ticks until last scheduled time
                 if self.current_time <= self.last_time {
@@ -148,11 +142,14 @@ impl Iterator for EventStream {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Cursor;
+
     use super::*;
 
     #[test]
     fn test_parse_event_schedule() {
-        let mut stream = EventStream::new();
+        let input = Cursor::new(b"10\t5\n");
+        let mut stream = EventStream::new(input);
         let line = "10\t5";
         let event = stream.parse_event(line).unwrap();
         assert_eq!(event.time, 10);
@@ -161,7 +158,8 @@ mod tests {
 
     #[test]
     fn test_parse_event_cancel() {
-        let mut stream = EventStream::new();
+        let mut stdin = io::stdin().lock();
+        let mut stream = EventStream::new(stdin);
         let line = "15\t-1";
         let event = stream.parse_event(line).unwrap();
         assert_eq!(event.time, 15);
@@ -170,7 +168,8 @@ mod tests {
 
     #[test]
     fn test_parse_event_invalid() {
-        let mut stream = EventStream::new();
+        let mut stdin = io::stdin().lock();
+        let mut stream = EventStream::new(stdin);
         let line = "invalid_line";
         let event = stream.parse_event(line);
         assert!(event.is_none());

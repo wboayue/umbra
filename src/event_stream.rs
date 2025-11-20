@@ -18,12 +18,11 @@ pub struct Event {
     pub command: Option<Command>,
 }
 
-/// Iterator that reads commands from stdin and produces time-stepped events.
+/// Iterator that reads commands from a reader and produces time-stepped events.
 /// Input format: `time\tfire_after` where negative fire_after indicates Cancel.
 /// Fills in time ticks between command events up to the last scheduled time.
 pub struct EventStream<R: io::Read> {
     reader: io::BufReader<R>,
-    // stdin: io::Stdin,
     pending_event: Option<Event>,
     last_time: u64,
     current_time: u64,
@@ -116,7 +115,7 @@ impl<R: io::Read> Iterator for EventStream<R> {
             }
         }
 
-        // Read next line from stdin
+        // Read next line from reader
         let mut buf = String::new();
         match self.reader.read_line(&mut buf) {
             Ok(0) => {
@@ -158,8 +157,8 @@ mod tests {
 
     #[test]
     fn test_parse_event_cancel() {
-        let mut stdin = io::stdin().lock();
-        let mut stream = EventStream::new(stdin);
+        let input = Cursor::new(b"15\t-1\n");
+        let mut stream = EventStream::new(input);
         let line = "15\t-1";
         let event = stream.parse_event(line).unwrap();
         assert_eq!(event.time, 15);
@@ -168,8 +167,8 @@ mod tests {
 
     #[test]
     fn test_parse_event_invalid() {
-        let mut stdin = io::stdin().lock();
-        let mut stream = EventStream::new(stdin);
+        let input = Cursor::new(b"invalid_line\n");
+        let mut stream = EventStream::new(input);
         let line = "invalid_line";
         let event = stream.parse_event(line);
         assert!(event.is_none());

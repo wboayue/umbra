@@ -3,7 +3,7 @@ pub mod scheduler;
 
 use std::io;
 
-use event_stream::{EventStream};
+use event_stream::EventStream;
 use scheduler::Scheduler;
 
 /// Processes events from the stream, managing scheduled actuations.
@@ -14,7 +14,7 @@ fn main() {
     let stdin = io::stdin().lock();
     let event_stream = EventStream::new(stdin);
     let mut scheduler = Scheduler::new();
-    
+
     for event in event_stream {
         scheduler.process_event(&event);
         scheduler.fire_ready_actuations(event.time);

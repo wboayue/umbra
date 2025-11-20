@@ -65,8 +65,11 @@ impl Iterator for EventStream {
                 self.pending_event = Some(pending);
                 let time = self.current_time;
                 self.current_time += 1;
-                return Some(Tick { time, fire_in: None });
-            }  else {
+                return Some(Tick {
+                    time,
+                    fire_in: None,
+                });
+            } else {
                 return Some(self.process_event(pending));
             }
         }
@@ -78,11 +81,14 @@ impl Iterator for EventStream {
                 if self.current_time <= self.last_time {
                     let time = self.current_time;
                     self.current_time += 1;
-                    return Some(Tick { time, fire_in: None });
+                    return Some(Tick {
+                        time,
+                        fire_in: None,
+                    });
                 } else {
                     return None;
                 }
-            }, // EOF
+            } // EOF
             Ok(_) => {
                 let event = self.parse_event(buf.trim())?;
                 // stops on error or invalid line. could skip invalid lines instead.

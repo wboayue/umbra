@@ -8,8 +8,9 @@ struct Actuation {
 }
 
 /// Processes events from the stream, managing scheduled actuations.
-/// Handles Schedule commands to set firing times, Cancel commands to clear pending actuations,
-/// and fires when the event time matches the scheduled time.
+/// * Handles Schedule commands to set firing times
+/// * Handles Cancel commands to clear pending actuations
+/// * Fires when the event time matches the scheduled time
 fn main() {
     let mut pending_actuation: Option<Actuation> = None;
     let event_stream = EventStream::new();
@@ -20,14 +21,14 @@ fn main() {
             Some(Command::Schedule(fire_after)) => {
                 if let Some(pending_actuation) = &pending_actuation {
                     println!(
-                        "[{}] cancel scheduled firing at {}",
+                        "[{}] cancel pending firing at {}",
                         event.time, pending_actuation.fire_at
                     );
                 }
 
                 println!("[{}] schedule firing in {}", event.time, fire_after);
                 pending_actuation = Some(Actuation {
-                    fire_at: event.time + *fire_after as u64,
+                    fire_at: event.time + *fire_after,
                 });
             }
             Some(Command::Cancel) => {

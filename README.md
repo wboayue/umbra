@@ -21,15 +21,17 @@ You should get output similar to
 
 ### Runtime
 
-No need for async runtime so went with standard library and no additional dependencies.
+No need for an async runtime, so I went with the standard library and no additional dependencies.
 
 ### Input
 
-Primary considered two input formats. One with `time_step,command` per line and only `command` per line.
+I primarily considered two input formats:
 
-Only a `command` per line is a simple format supporting infinite time steps. Downside is file could potentially have many empty line for time steps without commands. Less readable for human.
+1. **`command` only per line**: Simple format supporting infinite time steps, but could result in many empty lines for time steps without commands. Less readable for humans.
 
-With a `time_step,command` per line you end up with a compact readable file but have a little more work parsing the file. Cons are limiting the number of time steps that can be specified and opening yourself to errors file events being specified out of order.
+2. **`time_step,command` per line**: More compact and readable, but requires slightly more parsing work. Risk of events being specified out of order.
+
+I chose the `time_step,command` format for readability.
 
 ### Output
 
@@ -37,10 +39,10 @@ I made the scheduling messages more descriptive, added a cancel message, and inc
 
 ## Architecture
 
-The solution consist of 3 components. An EventStream, a Scheduler and the control loop.
+The solution consists of three components:
 
-The EventStream reads from stdin and generate a stream of events for each time step until there are no longer pending actuation. Events always contain a time step and may contain an Actuation or cancel command.
+- **EventStream**: Reads from stdin and generates a stream of events for each time step until there is no pending actuation. Events always contain a time step and may contain an actuation or cancel command.
 
-The Scheduler processes actuation and cancel commands and fire actuation commands for the given timestep.
+- **Scheduler**: Processes actuation and cancel commands and fires actuations for the given time step.
 
-The main control loop ties every things together. Instantiating the eventsteam and scheduler, pulling events from the stream and forwarding them to the scheduler.
+- **Main control loop**: Ties everything together by instantiating the EventStream and Scheduler, pulling events from the stream, and forwarding them to the Scheduler.

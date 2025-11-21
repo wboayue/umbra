@@ -53,11 +53,14 @@ impl Scheduler {
     /// Fires any pending actuation if its scheduled time matches the current time.
     /// Clears the pending actuation after firing.
     pub fn fire_ready_actuations(&mut self, current_time: u64) {
-        if let Some(actuation) = &self.pending_actuation
-            && actuation.fire_at == current_time
-        {
-            println!("[{}] firing now!", current_time);
-            self.pending_actuation = None;
+        match &self.pending_actuation {
+            Some(actuation) if actuation.fire_at == current_time => {
+                println!("[{}] firing now!", current_time);
+                self.pending_actuation = None;
+            }
+            _ => {
+                // No actuation to fire at this time
+            }
         }
     }
 }

@@ -8,7 +8,7 @@ Tested with `rustc 1.87.0`.
 cargo run < events.csv
 ```
 
-You should get output similar to
+You should get output similar to:
 
 ```text
 [0] schedule firing in 15
@@ -33,6 +33,11 @@ I primarily considered two input formats:
 
 I chose the `time_step,command` format for readability.
 
+```csv
+0,15
+2,30
+```
+
 ### Output
 
 I made the scheduling messages more descriptive, added a cancel message, and included time steps in all messages.
@@ -41,8 +46,8 @@ I made the scheduling messages more descriptive, added a cancel message, and inc
 
 The solution consists of three components:
 
-- **EventStream**: Reads from stdin and generates a stream of events for each time step until there is no pending actuation. Events always contain a time step and may contain an actuation or cancel command.
+- **EventStream**: Reads commands from stdin and produces a continuous stream of time-stepped events. It generates synthetic time ticks to fill gaps between commands and continues generating events until all scheduled actuations have fired.
 
-- **Scheduler**: Processes actuation and cancel commands and fires actuations for the given time step.
+- **Scheduler**: Maintains at most one pending actuation at a time. Processes schedule and cancel commands, automatically canceling any existing actuation when a new one is scheduled, and fires actuations when their scheduled time arrives.
 
-- **Main control loop**: Ties everything together by instantiating the EventStream and Scheduler, pulling events from the stream, and forwarding them to the Scheduler.
+- **Main loop**: Pulls events from the EventStream and forwards them to the Scheduler for processing.

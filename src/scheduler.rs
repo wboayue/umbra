@@ -24,7 +24,7 @@ impl Scheduler {
     pub fn is_empty(&self) -> bool {
         self.pending_fire.is_none()
     }
-    
+
     /// Handles a command by scheduling, canceling, or ignoring it.
     pub fn process_command(&mut self, command: Command) {
         match command {

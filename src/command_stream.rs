@@ -30,13 +30,20 @@ impl<R: AsyncBufRead + Unpin> CommandStream<R> {
             match self.lines.next_line().await {
                 Ok(Some(line)) => {
                     let trimmed = line.trim();
-                    if let Ok(delay) = trimmed.parse::<i64>() {
-                        if delay < 0 {
-                            return Command::Cancel;
-                        } else {
-                            return Command::Schedule(delay as u64);
-                        }
+                    let delay = if let Ok(delay) = trimmed.parse::<i64>() {
+                        delay
+                    } else {
+                        continue;
+                    };
+
+                    if delay >= 0 {
+                        return Command::Schedule(delay as u64);
                     }
+
+                    if delay == -1 {
+                        return Command::Cancel;
+                    }
+
                     // Invalid input, ignore and wait for the next command
                 }
                 Ok(None) => return Command::Quit,

@@ -1,4 +1,4 @@
-//! Async flight computer scheduler that reads commands from stdin and executes them at scheduled times.
+//! Async scheduler that reads commands from stdin and executes them at scheduled times.
 
 use crate::scheduler::Scheduler;
 
@@ -11,7 +11,7 @@ use command_stream::{Command, CommandStream};
 async fn main() {
     let reader = tokio::io::BufReader::new(tokio::io::stdin());
     let mut command_stream = CommandStream::new(reader);
-    
+
     let mut scheduler = Scheduler::default();
 
     loop {

@@ -1,66 +1,43 @@
-//! Scheduler module for managing timed actuations.
-//! Handles scheduling, canceling, and firing of actuations based on event stream commands.
+use std::pin::Pin;
+use std::time::Duration;
 
-use crate::event_stream::{Command, Event};
+use tokio::time::Sleep;
 
-/// Represents a scheduled actuation with its firing time
-struct Actuation {
-    fire_at: u64,
-}
+use crate::command_stream::Command;
 
-/// Manages scheduled actuations, ensuring at most one actuation is pending at any time.
-/// New schedules automatically cancel any pending actuation.
 pub struct Scheduler {
-    pending_actuation: Option<Actuation>,
+    pending_fire: Option<Pin<Box<Sleep>>>,
 }
 
 impl Scheduler {
-    /// Creates a new Scheduler with no pending actuations.
     pub fn new() -> Self {
-        Scheduler {
-            pending_actuation: None,
-        }
+        Scheduler { pending_fire: None }
     }
 
-    /// Processes an event, handling Schedule and Cancel commands.
-    /// Schedule commands set a new pending actuation, canceling any existing one.
-    /// Cancel commands clear any pending actuation.
-    pub fn process_event(&mut self, event: &Event) {
-        match &event.command {
-            Some(Command::Schedule(fire_after)) => {
-                if let Some(pending_actuation) = &self.pending_actuation {
-                    println!(
-                        "[{}] cancel pending firing at {}",
-                        event.time, pending_actuation.fire_at
-                    );
-                }
+    pub fn clear_pending(&mut self) {
+        self.pending_fire = None;
+    }
 
-                println!("[{}] schedule firing in {}", event.time, fire_after);
-                self.pending_actuation = Some(Actuation {
-                    fire_at: event.time + *fire_after,
-                });
+    pub fn process_command(&mut self, command: Command) {
+        match command {
+            Command::Schedule(delay) => {
+                self.pending_fire = Some(Box::pin(tokio::time::sleep(Duration::from_secs(delay))));
             }
-            Some(Command::Cancel) => {
-                println!("[{}] cancel any pending firing", event.time);
-                self.pending_actuation = None;
+            Command::Cancel => {
+                self.clear_pending();
             }
-            None => {
-                // No command, just a time tick
+            Command::Quit => {
+                // No action needed here for Quit in Scheduler
             }
         }
     }
 
-    /// Fires any pending actuation if its scheduled time matches the current time.
-    /// Clears the pending actuation after firing.
-    pub fn fire_ready_actuations(&mut self, current_time: u64) {
-        match &self.pending_actuation {
-            Some(actuation) if actuation.fire_at == current_time => {
-                println!("[{}] firing now!", current_time);
-                self.pending_actuation = None;
-            }
-            _ => {
-                // No actuation to fire at this time
-            }
+    pub async fn next_fire(&mut self) {
+        if let Some(ref mut timer) = self.pending_fire {
+            timer.await;
+            self.clear_pending();
+        } else {
+            std::future::pending().await
         }
     }
 }

@@ -1,3 +1,5 @@
+//! Manages scheduled command execution with async timer support.
+
 use std::pin::Pin;
 use std::time::Duration;
 
@@ -5,6 +7,7 @@ use tokio::time::Sleep;
 
 use crate::command_stream::Command;
 
+/// Tracks a pending fire event and executes it after a configured delay.
 pub struct Scheduler {
     pending_fire: Option<Pin<Box<Sleep>>>,
 }
@@ -22,6 +25,7 @@ impl Scheduler {
         self.pending_fire.is_none()
     }
     
+    /// Handles a command by scheduling, canceling, or ignoring it.
     pub fn process_command(&mut self, command: Command) {
         match command {
             Command::Schedule(delay) => {
@@ -36,6 +40,7 @@ impl Scheduler {
         }
     }
 
+    /// Awaits the next scheduled fire event, or blocks indefinitely if none is pending.
     pub async fn next_fire(&mut self) {
         if let Some(ref mut timer) = self.pending_fire {
             timer.await;

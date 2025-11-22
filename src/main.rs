@@ -1,3 +1,5 @@
+//! Async flight computer scheduler that reads commands from stdin and executes them at scheduled times.
+
 use crate::scheduler::Scheduler;
 
 pub mod command_stream;

@@ -1,11 +1,18 @@
+//! Parses commands from an async input stream.
+
 use tokio::io::{AsyncBufRead, AsyncBufReadExt, Lines};
 
+/// A scheduler command parsed from input.
 pub enum Command {
+    /// Schedule a fire event after the given delay in seconds.
     Schedule(u64),
+    /// Cancel any pending fire event.
     Cancel,
+    /// Signal to terminate the scheduler.
     Quit,
 }
 
+/// Reads lines from an async reader and parses them into commands.
 pub struct CommandStream<R> {
     lines: Lines<R>,
 }
@@ -17,6 +24,7 @@ impl<R: AsyncBufRead + Unpin> CommandStream<R> {
         }
     }
 
+    /// Parses the next command from input. Returns `Quit` on EOF.
     pub async fn next_command(&mut self) -> Command {
         loop {
             match self.lines.next_line().await {

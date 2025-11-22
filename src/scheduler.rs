@@ -43,8 +43,9 @@ impl Scheduler {
 
     /// Awaits the next scheduled fire event, or blocks indefinitely if none is pending.
     pub async fn next_fire(&mut self) {
-        if let Some(ref mut timer) = self.pending_fire.take() {
+        if let Some(ref mut timer) = self.pending_fire {
             timer.await;
+            self.pending_fire = None;
         } else {
             std::future::pending().await
         }

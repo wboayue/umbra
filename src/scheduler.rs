@@ -18,10 +18,6 @@ impl Scheduler {
         Scheduler { pending_fire: None }
     }
 
-    pub fn clear_pending(&mut self) {
-        self.pending_fire = None;
-    }
-
     pub fn is_empty(&self) -> bool {
         self.pending_fire.is_none()
     }
@@ -33,7 +29,7 @@ impl Scheduler {
                 self.pending_fire = Some(Box::pin(tokio::time::sleep(Duration::from_secs(delay))));
             }
             Command::Cancel => {
-                self.clear_pending();
+                self.pending_fire = None;
             }
             Command::Quit => {
                 // No action needed here for Quit in Scheduler

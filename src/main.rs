@@ -7,15 +7,19 @@ use command_stream::{Command, CommandStream};
 
 #[tokio::main]
 async fn main() {
-    let mut scheduler = Scheduler::new();
-    let mut command_stream = CommandStream::new(tokio::io::BufReader::new(tokio::io::stdin()));
+    let reader = tokio::io::BufReader::new(tokio::io::stdin());
+    let mut command_stream = CommandStream::new(reader);
+    
+    let mut scheduler = Scheduler::default();
 
     loop {
         tokio::select! {
             command = command_stream.next_command() => {
                 match command {
                     Command::Quit => {
-                        break;
+                        if scheduler.is_empty() {
+                            break;
+                        }
                     }
                     _ => {
                         scheduler.process_command(command);

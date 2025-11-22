@@ -18,6 +18,10 @@ impl Scheduler {
         self.pending_fire = None;
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.pending_fire.is_none()
+    }
+    
     pub fn process_command(&mut self, command: Command) {
         match command {
             Command::Schedule(delay) => {

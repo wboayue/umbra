@@ -41,7 +41,7 @@ impl<R: io::Read> EventStream<R> {
     /// Parses a tab-separated line into an Event.
     /// Format: `time\tfire_after` where negative fire_after means Cancel.
     fn parse_event(&mut self, line: &str) -> Option<Event> {
-        let parts: Vec<&str> = line.splitn(2, '\t').collect();
+        let parts: Vec<&str> = line.splitn(2, ',').map(|p| p.trim()).collect();
         if parts.len() != 2 {
             return None;
         }
@@ -62,30 +62,30 @@ impl<R: io::Read> EventStream<R> {
 
     /// Processes an event, filling in time ticks if needed before the event time.
     /// Updates last_time to track when scheduled actuations should complete.
-    fn process_event(&mut self, tick: Event) -> Event {
+    fn process_event(&mut self, event: Event) -> Event {
         // Fill in time ticks if event is in the future
-        if self.current_time < tick.time {
-            return self.advance_time(Some(tick));
+        if self.current_time < event.time {
+            return self.advance_time(Some(event));
         }
 
-        self.current_time = tick.time + 1;
+        self.current_time = event.time + 1;
 
         // Track the latest scheduled firing time
-        if let Some(Command::Schedule(fire_after)) = &tick.command {
-            match tick.time.checked_add(*fire_after) {
+        if let Some(Command::Schedule(fire_after)) = &event.command {
+            match event.time.checked_add(*fire_after) {
                 Some(scheduled_time) => {
                     self.last_time = self.last_time.max(scheduled_time);
                 }
                 None => {
                     eprintln!(
                         "Warning: scheduled time overflow at time {} with fire_after {}",
-                        tick.time, fire_after
+                        event.time, fire_after
                     );
                 }
             }
         }
 
-        tick
+        event
     }
 
     /// Advances time by one tick, returning an event with no command.
@@ -100,21 +100,8 @@ impl<R: io::Read> EventStream<R> {
             command: None,
         }
     }
-}
 
-impl<R: io::Read> Iterator for EventStream<R> {
-    type Item = Event;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // Process any pending event first
-        if let Some(pending) = self.pending_event.take() {
-            if self.current_time < pending.time {
-                return Some(self.advance_time(Some(pending)));
-            } else {
-                return Some(self.process_event(pending));
-            }
-        }
-
+    fn read_next_event(&mut self) -> Option<Event> {
         // Read next line from reader
         let mut buf = String::new();
         match self.reader.read_line(&mut buf) {
@@ -139,6 +126,23 @@ impl<R: io::Read> Iterator for EventStream<R> {
     }
 }
 
+impl<R: io::Read> Iterator for EventStream<R> {
+    type Item = Event;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Process any pending event first
+        if let Some(pending) = self.pending_event.take() {
+            if self.current_time < pending.time {
+                return Some(self.advance_time(Some(pending)));
+            } else {
+                return Some(self.process_event(pending));
+            }
+        }
+
+        self.read_next_event()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
@@ -147,9 +151,9 @@ mod tests {
 
     #[test]
     fn test_parse_event_schedule() {
-        let input = Cursor::new(b"10\t5\n");
+        let input = Cursor::new(b"10,5\n");
         let mut stream = EventStream::new(input);
-        let line = "10\t5";
+        let line = "10,5";
         let event = stream.parse_event(line).unwrap();
         assert_eq!(event.time, 10);
         assert_eq!(event.command, Some(Command::Schedule(5)));
@@ -157,9 +161,9 @@ mod tests {
 
     #[test]
     fn test_parse_event_cancel() {
-        let input = Cursor::new(b"15\t-1\n");
+        let input = Cursor::new(b"15,-1\n");
         let mut stream = EventStream::new(input);
-        let line = "15\t-1";
+        let line = "15,-1";
         let event = stream.parse_event(line).unwrap();
         assert_eq!(event.time, 15);
         assert_eq!(event.command, Some(Command::Cancel));

@@ -8,6 +8,7 @@ use tokio::time::Sleep;
 use crate::command_stream::Command;
 
 /// Tracks a pending fire event and executes it after a configured delay.
+#[derive(Default)]
 pub struct Scheduler {
     pending_fire: Option<Pin<Box<Sleep>>>,
 }
@@ -42,17 +43,10 @@ impl Scheduler {
 
     /// Awaits the next scheduled fire event, or blocks indefinitely if none is pending.
     pub async fn next_fire(&mut self) {
-        if let Some(ref mut timer) = self.pending_fire {
+        if let Some(ref mut timer) = self.pending_fire.take() {
             timer.await;
-            self.clear_pending();
         } else {
             std::future::pending().await
         }
-    }
-}
-
-impl Default for Scheduler {
-    fn default() -> Self {
-        Self::new()
     }
 }
